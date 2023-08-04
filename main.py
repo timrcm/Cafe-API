@@ -59,9 +59,9 @@ def home():
 
 
 @app.route('/all', methods=['GET'])
-def all_cafes():
-    cafes = db.session.execute(db.select(Cafe)).scalars().all()
-    cafe_list = [cafe.to_dict() for cafe in cafes]
+def get_all_cafes():
+    all_cafes = db.session.execute(db.select(Cafe)).scalars()
+    cafe_list = [cafe.to_dict() for cafe in all_cafes]
     return jsonify(cafes=cafe_list)
 
 
@@ -72,6 +72,19 @@ def random_cafe():
     rand_cafe_id = random.randint(1, rows)
     cafe = db.session.execute(db.select(Cafe).filter_by(id=rand_cafe_id)).scalar()
     return jsonify(cafe.to_dict())
+
+
+@app.route('/search', methods=['GET'])
+def search_cafes():
+    loc = request.args.get('loc')
+    found_cafes = db.session.execute(db.select(Cafe).where(Cafe.location == loc.title())).scalars()
+    found_cafe_list = [cafe.to_dict() for cafe in found_cafes]
+
+    # Check if any results were found
+    if found_cafe_list == []:
+        return jsonify(error={"Not Found": "Sorry, we do not have a cafe at that location"})
+    else:
+        return jsonify(cafes=found_cafe_list)
 
 
 ## HTTP GET - Read Record
