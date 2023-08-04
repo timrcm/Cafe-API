@@ -33,6 +33,21 @@ class Cafe(db.Model):
     can_take_calls = db.Column(db.Boolean, nullable=False)
     coffee_price = db.Column(db.String(250), nullable=True)
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'map_url': self.map_url,
+            'img_url': self.img_url,
+            'location': self.location,
+            'seats': self.seats,
+            'has_toilet': self.has_toilet,
+            'has_wifi': self.has_wifi,
+            'has_sockets': self.has_sockets,
+            'can_take_calls': self.can_take_calls,
+            'coffee_price': self.coffee_price
+        }
+
 
 with app.app_context():
     db.create_all()
@@ -45,7 +60,9 @@ def home():
 
 @app.route('/all', methods=['GET'])
 def all_cafes():
-    pass
+    cafes = db.session.execute(db.select(Cafe)).scalars().all()
+    cafe_list = [cafe.to_dict() for cafe in cafes]
+    return jsonify(cafes=cafe_list)
 
 
 @app.route('/random', methods=['GET'])
@@ -54,19 +71,7 @@ def random_cafe():
     rows = db.session.query(Cafe).count()
     rand_cafe_id = random.randint(1, rows)
     cafe = db.session.execute(db.select(Cafe).filter_by(id=rand_cafe_id)).scalar()
-    # Can this be serialized to json in a simpler way? .__dict__ does not work on the object
-    return jsonify(name=cafe.name,
-                   map_url=cafe.map_url,
-                   location=cafe.location,
-                   seats=cafe.seats,
-                   img_url=cafe.img_url,
-                   id=cafe.id,
-                   has_wifi=cafe.has_wifi,
-                   has_toilet=cafe.has_toilet,
-                   has_sockets=cafe.has_sockets,
-                   coffee_price=cafe.coffee_price,
-                   can_take_calls=cafe.can_take_calls
-                   )
+    return jsonify(cafe.to_dict())
 
 
 ## HTTP GET - Read Record
