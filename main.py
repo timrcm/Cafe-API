@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, render_template, request
 from flask_sqlalchemy import SQLAlchemy
+from os import getenv
 import random
 from typing import TYPE_CHECKING
 
@@ -109,15 +110,31 @@ def add_cafe():
 @app.route('/update-price/<int:cafe_id>', methods=['PATCH'])
 def update_price(cafe_id):
     new_price = request.args.get('new_price')
-    # TODO: Find a cleaner way to handle this.
+    # Need to find a cleaner way to handle 404s.
     try:
         cafe = db.get_or_404(Cafe, cafe_id)
     except Exception as e:
-        return jsonify(errror={"Not found": "That cafe ID was not found."}), 404
+        return jsonify(errror={"Not found": f"{e}"}), 404
     else:
         cafe.coffee_price = new_price
         db.session.commit()
         return jsonify(success={"Success": "Successfully updated the price."}), 200
+
+
+@app.route('/delete/<int:cafe_id>', methods=['DELETE'])
+def delete_cafe(cafe_id):
+    api_key = request.args.get('api_key')
+    if api_key == getenv('TEST_API_KEY'):
+        try:
+            cafe = db.get_or_404(Cafe, cafe_id)
+        except Exception as e:
+            return jsonify(error=f'{e}'), 404
+        else:
+            db.session.delete(cafe)
+            db.session.commit()
+            return jsonify(success=f'Cafe found & removed - {cafe.name}'), 200
+    else:
+        return jsonify(error='Invalid API key'), 401
 
 
 if __name__ == '__main__':
