@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 
 app = Flask(__name__)
 
-##Connect to Database
+##Connect to sqlite
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cafes.db'
 db = SQLAlchemy()
 db.init_app(app)
 
-# Fix SQLAlchemy linting
+# Fix SQLAlchemy linting...
 if TYPE_CHECKING:
     from flask_sqlalchemy.model import Model
 
@@ -19,7 +19,7 @@ else:
     BaseModel = db.Model
 
 
-##Cafe TABLE Configuration
+# Cafe table configuration
 class Cafe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(250), unique=True, nullable=False)
@@ -82,32 +82,42 @@ def search_cafes():
 
     # Check if any results were found
     if found_cafe_list == []:
-        return jsonify(error={"Not Found": "Sorry, we do not have a cafe at that location"})
+        return jsonify(error={"Not Found": "Sorry, a cafe was not found at that location"})
     else:
         return jsonify(cafes=found_cafe_list)
 
 
-@app.route('/add', methods=['GET', 'POST'])
+@app.route('/add', methods=['POST'])
 def add_cafe():
-    if request.method == 'POST':
-        new_cafe = Cafe(
-            name=request.args.get('name'),
-            map_url=request.args.get('map_url'),
-            img_url=request.args.get('img_url'),
-            location=request.args.get('location'),
-            seats=request.args.get('seats'),
-            has_toilet=bool(request.args.get('has_toilet')),
-            has_wifi=bool(request.args.get('has_wifi')),
-            has_sockets=bool(request.args.get('has_sockets')),
-            can_take_calls=bool(request.args.get('can_take_calls')),
-            coffee_price=request.args.get('coffee_price')
-        )
-        print(new_cafe.to_dict())
-        db.session.add(new_cafe)
-        db.session.commit()
-        return jsonify(response={'success': 'Successfully added the new cafe.'})
+    new_cafe = Cafe(
+        name=request.args.get('name'),
+        map_url=request.args.get('map_url'),
+        img_url=request.args.get('img_url'),
+        location=request.args.get('location'),
+        seats=request.args.get('seats'),
+        has_toilet=bool(request.args.get('has_toilet')),
+        has_wifi=bool(request.args.get('has_wifi')),
+        has_sockets=bool(request.args.get('has_sockets')),
+        can_take_calls=bool(request.args.get('can_take_calls')),
+        coffee_price=request.args.get('coffee_price')
+    )
+    db.session.add(new_cafe)
+    db.session.commit()
+    return jsonify(response={'success': 'Successfully added the new cafe.'})
+
+
+@app.route('/update-price/<int:cafe_id>', methods=['PATCH'])
+def update_price(cafe_id):
+    new_price = request.args.get('new_price')
+    # TODO: Find a cleaner way to handle this.
+    try:
+        cafe = db.get_or_404(Cafe, cafe_id)
+    except Exception as e:
+        return jsonify(errror={"Not found": "That cafe ID was not found."}), 404
     else:
-        return 'You must be lost.'
+        cafe.coffee_price = new_price
+        db.session.commit()
+        return jsonify(success={"Success": "Successfully updated the price."}), 200
 
 
 if __name__ == '__main__':
